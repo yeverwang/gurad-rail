@@ -1,0 +1,224 @@
+metadata:
+  contract_id: "fintech/payment-agent/v2.1.0"
+  version: "2.1.0"
+  schema_version: "1.0"
+  owner: "platform-team@company.com"
+  created_at: "2026-01-15T08:00:00Z"
+  updated_at: "2026-03-01T10:30:00Z"
+  status: "active"
+  review_cycle: 30
+  tags: ["payment", "high-risk", "pci-dss"]
+
+intent:
+  purpose: |
+    协助企业用户完成内部转账和供应商付款操作。
+    任何超出既定规则的财务行为都应上升到人类审批。
+
+  scope:
+    authorized_domains:
+      - "payment.domestic"
+      - "payment.supplier"
+      - "balance.read"
+    excluded_domains:
+      - "payment.international"
+      - "account.delete"
+      - "user.privilege.modify"
+    authorized_users:
+      - "finance_operator"
+      - "finance_manager"
+    authorized_systems:
+      - "erp-system-prod"
+      - "approval-workflow-v3"
+
+  actions:
+    allowed:
+      - action: "read_account_balance"
+        description: "查询账户余额"
+        requires_confirmation: false
+        audit_level: "basic"
+
+      - action: "initiate_transfer"
+        description: "发起转账"
+        requires_confirmation: true
+        audit_level: "full"
+
+    restricted:
+      - action: "batch_transfer"
+        description: "批量转账"
+        conditions:
+          - "total_amount <= 200000"
+          - "current_hour >= 9 AND current_hour <= 18"
+        max_frequency: "3/day"
+        requires_approval_from: "finance_manager"
+
+    forbidden:
+      - action: "modify_transfer_record"
+        reason: "账务记录不可篡改"
+      - action: "access_personal_bank_accounts"
+        reason: "超出企业支付授权范围"
+      - action: "transfer_to_external_crypto"
+        reason: "加密货币转账不在合规范围内"
+
+constraints:
+  hard:
+    - id: "HC-001"
+      name: "单笔金额上限"
+      rule: "amount <= 50000"
+      violation_response: "reject"
+      alert_immediately: true
+
+    - id: "HC-002"
+      name: "白名单收款方"
+      rule: "to_account IN approved_recipients"
+      violation_response: "terminate"
+      alert_immediately: true
+
+    - id: "HC-003"
+      name: "禁止自我授权"
+      rule: "NOT (initiator == approver)"
+      violation_response: "terminate"
+      alert_immediately: true
+
+  soft:
+    - id: "SC-001"
+      name: "非工作时间转账"
+      rule: "current_hour >= 9 AND current_hour <= 18"
+      violation_response: "warn"
+      cooldown_before_escalate: 300
+
+    - id: "SC-002"
+      name: "备注字段不为空"
+      rule: "memo_length > 5"
+      violation_response: "warn"
+      cooldown_before_escalate: 0
+
+  conditional:
+    - id: "CC-001"
+      name: "大额转账强制双签"
+      trigger_condition: "amount > 20000"
+      then_enforce:
+        rule: "approval_count >= 2"
+        response: "reject"
+
+    - id: "CC-002"
+      name: "节假日转账锁定"
+      trigger_condition: "is_holiday == True"
+      then_enforce:
+        rule: "is_pre_approved == True"
+        response: "reject"
+
+  quotas:
+    - resource: "daily_transfer_count"
+      limit: 20
+      window: "day"
+      scope: "per_user"
+      on_exceed: "reject"
+
+    - resource: "daily_transfer_amount"
+      limit: 500000
+      window: "day"
+      scope: "global"
+      on_exceed: "throttle"
+
+  data_governance:
+    pii_handling:
+      detection: true
+      on_detect: "redact"
+      allowed_pii_fields: ["account_holder_name"]
+    data_residency: "cn-east"
+    retention_policy: 2555
+
+drift_detection:
+  baseline:
+    collection_period: 30
+    metrics:
+      - name: "daily_transfer_count"
+        type: "count"
+        description: "每日发起转账次数"
+        aggregation_window: "24h"
+
+      - name: "avg_transfer_amount"
+        type: "distribution"
+        description: "平均转账金额"
+        aggregation_window: "24h"
+
+      - name: "off_hours_ratio"
+        type: "ratio"
+        description: "非工作时间请求占比"
+        aggregation_window: "24h"
+
+      - name: "rejection_rate"
+        type: "rate"
+        description: "请求被拒绝率"
+        aggregation_window: "1h"
+
+  thresholds:
+    - metric: "daily_transfer_count"
+      warning_at: 50
+      critical_at: 100
+      direction: "increase"
+
+    - metric: "avg_transfer_amount"
+      warning_at: 30
+      critical_at: 80
+      direction: "increase"
+
+    - metric: "off_hours_ratio"
+      warning_at: 20
+      critical_at: 50
+      direction: "increase"
+
+    - metric: "rejection_rate"
+      warning_at: 15
+      critical_at: 40
+      direction: "increase"
+
+  detection_rules:
+    - id: "DR-001"
+      name: "金额异常拉升"
+      algorithm: "zscore"
+      parameters:
+        window: "6h"
+        sensitivity: "high"
+        zscore_threshold: 2.5
+      on_detect:
+        severity: "critical"
+        action: "throttle"
+        notify: ["finance_manager", "security_team"]
+
+    - id: "DR-002"
+      name: "非工作时间操作激增"
+      algorithm: "ewma"
+      parameters:
+        window: "24h"
+        sensitivity: "medium"
+        alpha: 0.3
+        deviation_factor: 2.0
+      on_detect:
+        severity: "warning"
+        action: "alert"
+        notify: ["finance_manager"]
+
+    - id: "DR-003"
+      name: "深夜批量操作"
+      algorithm: "manual"
+      parameters:
+        rule: "off_hours_ratio > 0.5 AND daily_transfer_count > 18"
+      on_detect:
+        severity: "emergency"
+        action: "suspend"
+        notify: ["ciso", "on_call_engineer"]
+
+  response_playbook:
+    warning:
+      - "log_to_control_pit"
+      - "notify_owner"
+    critical:
+      - "reduce_quota_by_50_percent"
+      - "require_human_approval"
+      - "notify_security_team"
+    emergency:
+      - "suspend_agent"
+      - "snapshot_state"
+      - "freeze_pending_transfers"
+      - "page_on_call"
