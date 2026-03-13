@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contract Editor - Guardrail Engine</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/yaml/yaml.min.js"></script>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>🛡️ Contract Editor</h1>
+            <button class="btn btn-secondary" onclick="goBack()">← Back to List</button>
+        </div>
+    </header>
+
+    <main class="container editor-container">
+        <div class="editor-toolbar">
+            <div class="file-info">
+                <input type="text" id="filename" placeholder="contract_name.yaml" class="filename-input">
+                <span id="validationStatus" class="validation-status"></span>
+            </div>
+            <div class="toolbar-actions">
+                <button class="btn btn-secondary" onclick="loadTemplate()">📋 Load Template</button>
+                <button class="btn btn-info" onclick="validateContract()">✓ Validate</button>
+                <button class="btn btn-primary" onclick="saveContract()">💾 Save</button>
+            </div>
+        </div>
+
+        <div class="editor-layout">
+            <div class="editor-panel">
+                <h3>YAML Editor</h3>
+                <textarea id="editor"></textarea>
+            </div>
+
+            <div class="preview-panel">
+                <h3>Contract Preview</h3>
+                <div id="preview" class="preview-content">
+                    <p class="placeholder">Preview will appear here after validation</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        let editor;
+        const urlParams = new URLSearchParams(window.location.search);
+        const filename = urlParams.get('file');
+
+        // Initialize CodeMirror
+        document.addEventListener('DOMContentLoaded', () => {
+            editor = CodeMirror.fromTextArea(document.getElementById('editor'), {
+                mode: 'yaml',
+                theme: 'monokai',
+                lineNumbers: true,
+                lineWrapping: true,
+                indentUnit: 2,
+                tabSize: 2,
+                indentWithTabs: false
+            });
+
+            editor.setSize('100%', '600px');
+
+            // Auto-validate on change (debounced)
+            let timeout;
+            editor.on('change', () => {
+                clearTimeout(timeout);
+                timeout = setTimeout(validateContract, 1000);
+            });
+
+            if (filename) {
+                loadContract(filename);
+                document.getElementById('filename').value = filename;
+            } else {
+                // New contract - load template
+                loadTemplate();
+                document.getElementById('filename').value = 'new_contract.yaml';
+            }
+        });
+
+        async function loadContract(filename) {
+            try {
+                const response = await fetch(`/api/contract/${encodeURIComponent(filename)}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    showNotification(data.error, 'error');
+                    return;
+                }
+
+                editor.setValue(data.content);
+                showNotification('Contract loaded', 'success');
+            } catch (error) {
+                console.error('Load failed:', error);
+                showNotification('Failed to load contract', 'error');
+            }
+        }
+
+        async function loadTemplate() {
+            try {
+                const response = await fetch('/api/template');
+                const data = await response.json();
+                editor.setValue(data.content);
+                showNotification('Template loaded', 'success');
+            } catch (error) {
+                console.error('Template load failed:', error);
+                showNotification('Failed to load template', 'error');
+            }
+        }
+
+        async function validateContract() {
+            const content = editor.getValue();
+            const statusEl = document.getElementById('validationStatus');
+            const previewEl = document.getElementById('preview');
+
+            try {
+                const response = await fetch('/api/validate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content })
+                });
+
+                const result = await response.json();
+
+                if (result.valid) {
+                    statusEl.textContent = '✓ Valid';
+                    statusEl.className = 'validation-status valid';
+
+                    // Show preview
+                    const yaml = jsyaml.load(content);
+                    previewEl.innerHTML = renderPreview(yaml);
+                } else {
+                    statusEl.textContent = `✗ ${result.error}`;
+                    statusEl.className = 'validation-status invalid';
+                    previewEl.innerHTML = `
+                        <div class="error-box">
+                            <h4>❌ Validation Error</h4>
+                            <p><strong>${result.error}</strong></p>
+                            <pre>${result.message}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Validation failed:', error);
+                statusEl.textContent = '✗ Error';
+                statusEl.className = 'validation-status invalid';
+            }
+        }
+
+        async function saveContract() {
+            const filenameInput = document.getElementById('filename');
+            let fname = filenameInput.value.trim();
+
+            if (!fname) {
+                showNotification('Please enter a filename', 'error');
+                return;
+            }
+
+            if (!fname.endsWith('.yaml')) {
+                fname += '.yaml';
+                filenameInput.value = fname;
+            }
+
+            const content = editor.getValue();
+
+            try {
+                const url = filename
+                    ? `/api/contract/${encodeURIComponent(filename)}`
+                    : `/api/contract/new`;
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        content,
+                        filename: fname
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success || response.ok) {
+                    showNotification(result.message || 'Contract saved successfully', 'success');
+
+                    // Redirect to editor with the saved filename
+                    if (!filename && result.filename) {
+                        setTimeout(() => {
+                            window.location.href = `/editor?file=${encodeURIComponent(result.filename)}`;
+                        }, 1000);
+                    }
+                } else {
+                    showNotification(result.error || result.message || 'Failed to save contract', 'error');
+                }
+            } catch (error) {
+                console.error('Save failed:', error);
+                showNotification('Failed to save contract', 'error');
+            }
+        }
+
+        function renderPreview(data) {
+            const metadata = data.metadata || {};
+            const intent = data.intent || {};
+            const constraints = data.constraints || {};
+            const drift = data.drift_detection || {};
+
+            return `
+                <div class="preview-section">
+                    <h4>📋 Metadata</h4>
+                    <table>
+                        <tr><td><strong>Contract ID:</strong></td><td>${metadata.contract_id || 'N/A'}</td></tr>
+                        <tr><td><strong>Version:</strong></td><td>${metadata.version || 'N/A'}</td></tr>
+                        <tr><td><strong>Status:</strong></td><td><span class="status-badge status-${(metadata.status || '').toLowerCase()}">${metadata.status || 'N/A'}</span></td></tr>
+                        <tr><td><strong>Owner Team:</strong></td><td>${metadata.owner_team || 'N/A'}</td></tr>
+                    </table>
+                </div>
+
+                <div class="preview-section">
+                    <h4>🎯 Intent</h4>
+                    <p><strong>Purpose:</strong> ${intent.purpose || 'N/A'}</p>
+                    <p><strong>Allowed Actions:</strong> ${(intent.actions?.allowed || []).length}</p>
+                    <p><strong>Restricted Actions:</strong> ${(intent.actions?.restricted || []).length}</p>
+                    <p><strong>Forbidden Actions:</strong> ${(intent.actions?.forbidden || []).length}</p>
+                </div>
+
+                <div class="preview-section">
+                    <h4>⚙️ Constraints</h4>
+                    <table>
+                        <tr><td><strong>Hard Constraints:</strong></td><td>${(constraints.hard || []).length}</td></tr>
+                        <tr><td><strong>Soft Constraints:</strong></td><td>${(constraints.soft || []).length}</td></tr>
+                        <tr><td><strong>Conditional:</strong></td><td>${(constraints.conditional || []).length}</td></tr>
+                        <tr><td><strong>Quotas:</strong></td><td>${(constraints.quotas || []).length}</td></tr>
+                    </table>
+                </div>
+
+                <div class="preview-section">
+                    <h4>📊 Drift Detection</h4>
+                    <p><strong>Enabled:</strong> ${drift.enabled ? '✓ Yes' : '✗ No'}</p>
+                    <p><strong>Metrics:</strong> ${(drift.baseline?.metrics || []).length}</p>
+                    <p><strong>Detection Rules:</strong> ${(drift.detection_rules || []).length}</p>
+                </div>
+            `;
+        }
+
+        function goBack() {
+            window.location.href = '/';
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+</body>
+</html>

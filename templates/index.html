@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guardrail Engine - Contract Editor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>🛡️ Guardrail Engine</h1>
+            <p class="subtitle">Contract Management System</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="toolbar">
+            <h2>Agent Contracts</h2>
+            <button class="btn btn-primary" onclick="createNewContract()">
+                ➕ New Contract
+            </button>
+        </div>
+
+        <div class="contracts-grid" id="contractsList">
+            <!-- Contracts will be loaded here -->
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Load contracts on page load
+        document.addEventListener('DOMContentLoaded', loadContracts);
+
+        async function loadContracts() {
+            try {
+                const response = await fetch('/api/contracts');
+                const contracts = await response.json();
+
+                const container = document.getElementById('contractsList');
+
+                if (contracts.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <p>📝 No contracts found</p>
+                            <p>Create your first contract to get started</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = contracts.map(contract => `
+                    <div class="contract-card ${contract.error ? 'error' : ''}">
+                        <div class="contract-header">
+                            <span class="status-badge status-${contract.status.toLowerCase()}">
+                                ${contract.status}
+                            </span>
+                            <h3>${contract.contract_id}</h3>
+                        </div>
+                        <div class="contract-body">
+                            <p class="filename">📄 ${contract.filename}</p>
+                            <p class="version">Version: ${contract.version}</p>
+                            ${contract.error ? `<p class="error-msg">⚠️ ${contract.error}</p>` : ''}
+                        </div>
+                        <div class="contract-actions">
+                            <button class="btn btn-secondary" onclick="editContract('${contract.filename}')">
+                                ✏️ Edit
+                            </button>
+                            <button class="btn btn-danger" onclick="deleteContract('${contract.filename}')">
+                                🗑️ Delete
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Failed to load contracts:', error);
+                showNotification('Failed to load contracts', 'error');
+            }
+        }
+
+        function editContract(filename) {
+            window.location.href = `/editor?file=${encodeURIComponent(filename)}`;
+        }
+
+        async function deleteContract(filename) {
+            if (!confirm(`Are you sure you want to delete ${filename}?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/contract/${encodeURIComponent(filename)}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showNotification(result.message, 'success');
+                    loadContracts();
+                } else {
+                    showNotification(result.error || 'Failed to delete contract', 'error');
+                }
+            } catch (error) {
+                console.error('Delete failed:', error);
+                showNotification('Failed to delete contract', 'error');
+            }
+        }
+
+        function createNewContract() {
+            window.location.href = '/editor';
+        }
+    </script>
+</body>
+</html>

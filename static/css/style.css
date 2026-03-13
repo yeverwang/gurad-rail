@@ -1,0 +1,471 @@
+/* Global Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    color: #333;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header */
+header {
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+header .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+}
+
+header h1 {
+    font-size: 2rem;
+    color: #667eea;
+    margin: 0;
+}
+
+.subtitle {
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 5px;
+}
+
+/* Toolbar */
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+.toolbar h2 {
+    margin: 0;
+    color: #333;
+}
+
+/* Buttons */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #5568d3;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.btn-info {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-info:hover {
+    background: #138496;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+/* Contracts Grid */
+.contracts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+}
+
+.contract-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.contract-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+}
+
+.contract-card.error {
+    border-left: 4px solid #dc3545;
+}
+
+.contract-header {
+    margin-bottom: 15px;
+}
+
+.contract-header h3 {
+    margin: 10px 0 0 0;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-active {
+    background: #28a745;
+    color: white;
+}
+
+.status-draft {
+    background: #ffc107;
+    color: #333;
+}
+
+.status-deprecated {
+    background: #6c757d;
+    color: white;
+}
+
+.status-suspended {
+    background: #dc3545;
+    color: white;
+}
+
+.status-error {
+    background: #dc3545;
+    color: white;
+}
+
+.contract-body {
+    margin: 15px 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.contract-body p {
+    margin: 5px 0;
+}
+
+.filename {
+    font-family: 'Courier New', monospace;
+    color: #667eea;
+}
+
+.error-msg {
+    color: #dc3545;
+    font-weight: 500;
+}
+
+.contract-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.contract-actions .btn {
+    flex: 1;
+    text-align: center;
+}
+
+/* Empty State */
+.empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 10px;
+}
+
+.empty-state p {
+    margin: 10px 0;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+/* Editor Layout */
+.editor-container {
+    background: white;
+    border-radius: 10px;
+    padding: 0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.editor-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 2px solid #f0f0f0;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+}
+
+.filename-input {
+    padding: 10px 15px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: 'Courier New', monospace;
+    min-width: 250px;
+}
+
+.filename-input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.validation-status {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.validation-status.valid {
+    background: #28a745;
+    color: white;
+}
+
+.validation-status.invalid {
+    background: #dc3545;
+    color: white;
+}
+
+.toolbar-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Editor Layout */
+.editor-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+}
+
+.editor-panel,
+.preview-panel {
+    padding: 20px;
+}
+
+.editor-panel {
+    border-right: 2px solid #f0f0f0;
+}
+
+.editor-panel h3,
+.preview-panel h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.CodeMirror {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+/* Preview */
+.preview-content {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 20px;
+    min-height: 600px;
+    overflow-y: auto;
+}
+
+.preview-content .placeholder {
+    text-align: center;
+    color: #999;
+    padding: 40px;
+}
+
+.preview-section {
+    background: white;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.preview-section h4 {
+    margin: 0 0 10px 0;
+    color: #667eea;
+    font-size: 1rem;
+}
+
+.preview-section p {
+    margin: 8px 0;
+    color: #555;
+    font-size: 0.9rem;
+}
+
+.preview-section table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.preview-section table td {
+    padding: 8px 0;
+    font-size: 0.9rem;
+}
+
+.preview-section table td:first-child {
+    color: #666;
+    width: 40%;
+}
+
+.error-box {
+    background: #fff5f5;
+    border: 1px solid #dc3545;
+    border-radius: 6px;
+    padding: 15px;
+    color: #721c24;
+}
+
+.error-box h4 {
+    margin: 0 0 10px 0;
+    color: #dc3545;
+}
+
+.error-box pre {
+    background: white;
+    padding: 10px;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    margin-top: 10px;
+}
+
+/* Notification */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    animation: slideIn 0.3s ease;
+    font-weight: 500;
+}
+
+.notification.success {
+    background: #28a745;
+    color: white;
+}
+
+.notification.error {
+    background: #dc3545;
+    color: white;
+}
+
+.notification.info {
+    background: #17a2b8;
+    color: white;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .editor-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .editor-panel {
+        border-right: none;
+        border-bottom: 2px solid #f0f0f0;
+    }
+}
+
+@media (max-width: 768px) {
+    .contracts-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .toolbar h2 {
+        margin-bottom: 15px;
+    }
+
+    .editor-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .file-info {
+        flex-direction: column;
+    }
+
+    .toolbar-actions {
+        flex-direction: column;
+    }
+}
