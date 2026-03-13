@@ -56,6 +56,22 @@ python demo.py
 
 This runs 10 scenarios demonstrating all constraint types, quota limits, and drift detection.
 
+### Web Contract Editor
+
+Launch the web-based contract editor for a visual interface:
+
+```bash
+python web_editor.py
+```
+
+Then open **http://localhost:5000** in your browser to:
+- ✏️ Create and edit contracts with syntax highlighting
+- ✅ Validate contracts in real-time
+- 👁️ Preview contract structure
+- 📋 Use templates for quick setup
+
+See [WEB_EDITOR.md](WEB_EDITOR.md) for detailed documentation.
+
 ### Basic Usage
 
 ```python
